@@ -6,6 +6,8 @@ use digest::{
 #[cfg(feature = "rfc8391")]
 pub mod rfc8391;
 
+pub mod fips205;
+
 pub mod compressed;
 pub mod leighton_micali;
 
@@ -27,7 +29,11 @@ pub trait Scheme: OutputSizeUser + Sized {
         key: &Output<Self>,
         message: &Array<u8, Self::MessageSize>,
     ) -> impl Iterator<Item = Output<Self>> {
-        kernel(self.generate(key).zip(self.encode(message)), self)
+        kernel(
+            self.generate(key)
+                .zip(self.encode(message).map(|end| 0..end)),
+            self,
+        )
     }
 
     fn verify(
@@ -39,29 +45,34 @@ pub trait Scheme: OutputSizeUser + Sized {
         &self.compress(kernel(
             signature
                 .into_iter()
-                .zip(self.encode(message).map(|x| Self::W - 1 - x)),
+                .zip(self.encode(message).map(|digit| digit..Self::W - 1)),
             self,
         )) == key
+    }
+
+    fn verifying_key(&self, signing_key: &Output<Self>) -> Output<Self> {
+        self.compress(kernel(
+            self.generate(signing_key)
+                .zip(std::iter::repeat(0..Self::W - 1)),
+            self,
+        ))
     }
 }
 
 fn kernel<S: Scheme>(
-    elements: impl IntoIterator<Item = (Output<S>, u32)>,
+    elements: impl IntoIterator<Item = (Output<S>, std::ops::Range<u32>)>,
     s: &S,
 ) -> impl Iterator<Item = Output<S>> {
     elements
         .into_iter()
         .enumerate()
-        .map(|(i, (mut element, repetitions))| {
+        .map(|(i, (mut element, hash_indices))| {
             let i = i
                 .try_into()
                 .expect("elements should be shorter than `u32::MAX`");
-            (0..repetitions).for_each(|j| {
+            hash_indices.for_each(|j| {
                 element = s.chain(i, j, &element);
             });
             element
         })
 }
-
-// SigningKey
-// Signature (length depends on digitizer + step output size...)
