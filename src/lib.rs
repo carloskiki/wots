@@ -6,10 +6,19 @@ use digest::{
 #[cfg(feature = "rfc8391")]
 pub mod rfc8391;
 
+#[cfg(feature = "rfc8554")]
+pub mod rfc8554;
+
+#[cfg(feature = "fips205")]
 pub mod fips205;
 
 pub mod compressed;
-pub mod leighton_micali;
+
+#[cfg(all(
+    test,
+    any(feature = "rfc8391", feature = "rfc8554", feature = "fips205")
+))]
+mod tests;
 
 pub trait Scheme: OutputSizeUser + Sized {
     const W: u32;

@@ -10,12 +10,8 @@ shake = { version = "0.1.0", optional = true, default-features = false }
 
 [features]
 rfc8391 = ["sha2", "shake"]
+rfc8554 = ["sha2"]
 fips205 = ["sha2", "shake"]
 
 [dev-dependencies]
 criterion = "0.8.2"
-
-[[bench]]
-name = "rfc8391"
-harness = false
-required-features = ["rfc8391"]
