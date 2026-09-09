@@ -189,23 +189,7 @@ macro_rules! impl_scheme {
             }
 
             fn encode(&self, message: &Array<u8, Self::MessageSize>) -> impl Iterator<Item = u32> {
-                let mut iteration = 0;
-                let mut checksum = 0u32;
-                std::iter::from_fn(move || {
-                    if iteration < N * 2 {
-                        let shift = if iteration % 2 == 0 { 4 } else { 0 };
-                        let value = (u32::from(message[iteration / 2]) >> shift) & 0x0f;
-                        checksum += Self::W - 1 - value;
-                        iteration += 1;
-                        Some(value)
-                    } else if iteration < N * 2 + 3 {
-                        let shift = (N * 2 + 2 - iteration) * 4;
-                        iteration += 1;
-                        Some((checksum >> shift) & 0x0f)
-                    } else {
-                        None
-                    }
-                })
+                crate::encode::<4>(message, 3)
             }
 
             fn compress(&self, elements: impl IntoIterator<Item = Output<Self>>) -> Output<Self> {

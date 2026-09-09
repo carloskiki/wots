@@ -1,4 +1,3 @@
-use std::ops::Shl;
 use digest::{
     Digest, Output, OutputSizeUser, XofFixedWrapper,
     array::ArraySize,
@@ -7,6 +6,7 @@ use digest::{
     consts::{U32, U64},
     typenum::{self, Unsigned},
 };
+use std::ops::Shl;
 
 #[cfg(test)]
 mod tests;
@@ -130,28 +130,7 @@ impl<$($bounds)*> crate::Scheme for $ty {
         &self,
         message: &digest::array::Array<u8, Self::MessageSize>,
     ) -> impl Iterator<Item = u32> {
-        let mut iteration = 0;
-        let mut checksum: u32 = 0;
-        std::iter::from_fn(move || {
-            if iteration / 2 < message.len() {
-                let mut value = message[iteration / 2] as u32;
-                if iteration % 2 == 0 {
-                    value >>= 4;
-                } else {
-                    value &= 0x0f;
-                }
-                checksum += Self::W - 1 - value;
-                iteration += 1;
-                return Some(value);
-            }
-            if iteration < message.len() * 2 + 3 {
-                let shift = (2 - (iteration - message.len() * 2)) * 4;
-                let value = (checksum >> shift) & 0x0f;
-                iteration += 1;
-                return Some(value);
-            }
-            None
-        })
+        crate::encode::<4>(message, 3)
     }
 
     fn compress(&self, elements: impl IntoIterator<Item = Output<Self>>) -> Output<Self> {

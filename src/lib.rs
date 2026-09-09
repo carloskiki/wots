@@ -12,8 +12,6 @@ pub mod rfc8554;
 #[cfg(feature = "fips205")]
 pub mod fips205;
 
-pub mod compressed;
-
 #[cfg(all(
     test,
     any(feature = "rfc8391", feature = "rfc8554", feature = "fips205")
@@ -66,6 +64,32 @@ pub trait Scheme: OutputSizeUser + Sized {
             self,
         ))
     }
+}
+
+/// Encodes message digits followed by the checksum, most significant digit first.
+#[cfg(any(feature = "rfc8391", feature = "rfc8554", feature = "fips205"))]
+fn encode<const LOG_W: u32>(message: &[u8], checksum_digits: usize) -> impl Iterator<Item = u32> {
+    const { assert!(matches!(LOG_W, 1 | 2 | 4 | 8), "Invalid digit width") };
+    let mask = (1 << LOG_W) - 1;
+    let message_digits = message.len() * (8 / LOG_W as usize);
+    let len = message_digits + checksum_digits;
+    let mut checksum = 0u32;
+    let mut iterations = 0..len;
+
+    std::iter::from_fn(move || {
+        let iteration = iterations.next()?;
+        Some(if iteration < message_digits {
+            let bit = iteration * LOG_W as usize;
+            let value = (u32::from(message[bit / 8]) >> (8 - LOG_W as usize - bit % 8)) & mask;
+            checksum += mask - value;
+            value
+        } else {
+            // Reading the significant checksum digits directly also accounts
+            // for standards that left-align the checksum in a byte string.
+            let shift = (len - 1 - iteration) * LOG_W as usize;
+            (checksum >> shift) & mask
+        })
+    })
 }
 
 fn kernel<S: Scheme>(

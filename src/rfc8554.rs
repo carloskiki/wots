@@ -90,26 +90,7 @@ impl<const LOG_W: u32> crate::Scheme for Sha256<'_, LOG_W> {
     }
 
     fn encode(&self, message: &Array<u8, Self::MessageSize>) -> impl Iterator<Item = u32> {
-        let mut iteration = 0u32;
-        let mut checksum = 0u32;
-        std::iter::from_fn(move || {
-            if iteration < 256 / LOG_W {
-                let bit = iteration * LOG_W;
-                let value =
-                    (u32::from(message[(bit / 8) as usize]) >> (8 - LOG_W - bit % 8)) & (Self::W - 1);
-                checksum += Self::W - 1 - value;
-                iteration += 1;
-                Some(value)
-            } else if iteration < u32::from(Self::LEN) {
-                // Reading just the significant checksum digits is equivalent to
-                // appending u16str(checksum << ls) and applying coef.
-                let shift = (u32::from(Self::LEN) - 1 - iteration) * LOG_W;
-                iteration += 1;
-                Some((checksum >> shift) & (Self::W - 1))
-            } else {
-                None
-            }
-        })
+        crate::encode::<LOG_W>(message, usize::from(Self::LEN) - 256 / LOG_W as usize)
     }
 
     fn compress(&self, elements: impl IntoIterator<Item = Output<Self>>) -> Output<Self> {
