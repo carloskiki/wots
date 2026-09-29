@@ -4,7 +4,7 @@
 //! [`Sha256::hash_message`]. Signatures contain the chain elements y, and public
 //! keys contain K; typecodes, the randomizer C, and LMS/HSS framing are external.
 
-use digest::{Digest, Output, OutputSizeUser, array::Array, consts::U32};
+use digest::{Digest, Output, OutputSizeUser, consts::U32};
 
 #[cfg(test)]
 mod tests;
@@ -79,8 +79,6 @@ impl<const LOG_W: u32> crate::Scheme for Sha256<'_, LOG_W> {
         1 << LOG_W
     };
 
-    type MessageSize = U32;
-
     fn chain(&self, chain_index: u32, hash_index: u32, element: &Output<Self>) -> Output<Self> {
         self.digest(
             chain_index.try_into().expect("chain index must fit in u16"),
@@ -89,7 +87,7 @@ impl<const LOG_W: u32> crate::Scheme for Sha256<'_, LOG_W> {
         )
     }
 
-    fn encode(&self, message: &Array<u8, Self::MessageSize>) -> impl Iterator<Item = u32> {
+    fn encode(&self, message: &Output<Self>) -> impl Iterator<Item = u32> {
         crate::encode::<LOG_W>(message, usize::from(Self::LEN) - 256 / LOG_W as usize)
     }
 

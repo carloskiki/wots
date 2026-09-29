@@ -1,7 +1,4 @@
-use digest::{
-    Output, OutputSizeUser,
-    array::{Array, ArraySize},
-};
+use digest::{Output, OutputSizeUser};
 
 #[cfg(feature = "rfc8391")]
 pub mod rfc8391;
@@ -21,11 +18,9 @@ mod tests;
 pub trait Scheme: OutputSizeUser + Sized {
     const W: u32;
 
-    type MessageSize: ArraySize;
-
     fn chain(&self, chain_index: u32, hash_index: u32, element: &Output<Self>) -> Output<Self>;
 
-    fn encode(&self, message: &Array<u8, Self::MessageSize>) -> impl Iterator<Item = u32>;
+    fn encode(&self, message: &Output<Self>) -> impl Iterator<Item = u32>;
 
     fn compress(&self, elements: impl IntoIterator<Item = Output<Self>>) -> Output<Self>;
 
@@ -34,7 +29,7 @@ pub trait Scheme: OutputSizeUser + Sized {
     fn sign(
         &self,
         key: &Output<Self>,
-        message: &Array<u8, Self::MessageSize>,
+        message: &Output<Self>,
     ) -> impl Iterator<Item = Output<Self>> {
         kernel(
             self.generate(key)
@@ -46,7 +41,7 @@ pub trait Scheme: OutputSizeUser + Sized {
     fn verify(
         &self,
         key: &Output<Self>,
-        message: &Array<u8, Self::MessageSize>,
+        message: &Output<Self>,
         signature: impl IntoIterator<Item = Output<Self>>,
     ) -> bool {
         &self.compress(kernel(

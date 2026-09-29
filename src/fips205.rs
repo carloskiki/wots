@@ -1,6 +1,6 @@
 use digest::{
     Digest, ExtendableOutput, Output, OutputSizeUser,
-    array::{Array, ArraySize},
+    array::ArraySize,
     block_api::{CoreProxy, UpdateCore},
     common::Block,
     typenum::{Const, ToUInt, U},
@@ -176,7 +176,6 @@ macro_rules! impl_scheme {
             U<N>: ArraySize<ArrayType<u8> = [u8; N]>,
         {
             const W: u32 = 16;
-            type MessageSize = U<N>;
 
             fn chain(
                 &self,
@@ -188,7 +187,7 @@ macro_rules! impl_scheme {
                     .into()
             }
 
-            fn encode(&self, message: &Array<u8, Self::MessageSize>) -> impl Iterator<Item = u32> {
+            fn encode(&self, message: &Output<Self>) -> impl Iterator<Item = u32> {
                 crate::encode::<4>(message, 3)
             }
 

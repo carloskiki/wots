@@ -108,8 +108,6 @@ macro_rules! impl_scheme {
 impl<$($bounds)*> crate::Scheme for $ty {
     const W: u32 = 16;
 
-    type MessageSize = D::OutputSize;
-
     fn chain(&self, chain_index: u32, hash_index: u32, element: &Output<Self>) -> Output<Self> {
         let key = self.prf(0, chain_index, hash_index, 0);
         let bm = self.prf(0, chain_index, hash_index, 1);
@@ -128,7 +126,7 @@ impl<$($bounds)*> crate::Scheme for $ty {
 
     fn encode(
         &self,
-        message: &digest::array::Array<u8, Self::MessageSize>,
+        message: &Output<Self>
     ) -> impl Iterator<Item = u32> {
         crate::encode::<4>(message, 3)
     }
@@ -197,7 +195,7 @@ impl<$($bounds)*> crate::Scheme for $ty {
     }
 
     fn generate(&self, key: &Output<Self>) -> impl Iterator<Item = Output<Self>> {
-        (0..<Self::MessageSize as Unsigned>::USIZE * 2 + 3).map(move |i| {
+        (0..<Self::OutputSize as Unsigned>::USIZE * 2 + 3).map(move |i| {
             let mut digest = D::new();
             digest.update(&{
                 let mut prefix = Output::<D>::default();
